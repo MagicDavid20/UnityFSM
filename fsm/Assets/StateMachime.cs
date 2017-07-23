@@ -43,13 +43,14 @@ public class StateMachine : MonoBehaviour
 
     const string WILDCARD = "*";
     const string ASYNC = "ASYNC";
+
     const string STATE_NONE = "none";
 
-    public static string STATE_ONBRFOREEVENT = "onbeforeevent";
-    public static string STATE_ONAFTEREVENT = "onafterevent";
-    public static string STATE_ONLEAVEEVENT = "onleavestate";
-    public static string STATE_ONENTEREVENT = "onenterstate";
-    public static string STATE_ONCHANGEEVENT = "onchangestate";
+    public static string HANDLE_ONBRFOREEVENT = "onbeforeevent";
+    public static string HANDLE_ONAFTEREVENT = "onafterevent";
+    public static string HANDLE_ONLEAVEEVENT = "onleavestate";
+    public static string HANDLE_ONENTEREVENT = "onenterstate";
+    public static string HANDLE_ONCHANGEEVENT = "onchangestate";
 
     Dictionary<string, Dictionary<string, string>> _map;
     Dictionary<string, Func<SMEvent, bool>> _callbacks;
@@ -114,19 +115,6 @@ public class StateMachine : MonoBehaviour
     public bool IsFinishedState()
     {
         return IsState(_terminal);
-    }
-
-    private void AddEvent(SMEvent smEvent)
-    {
-        if (false == _map.ContainsKey(smEvent.Name))
-        {
-            _map.Add(smEvent.Name, new Dictionary<string, string>());
-        }
-
-        foreach (string fromName in smEvent.Froms)
-        {
-            _map[smEvent.Name].Add(fromName, smEvent.To);
-        }
     }
 
     public int DoEventForce(string name)
@@ -210,6 +198,16 @@ public class StateMachine : MonoBehaviour
         }
     }
 
+    private void AddEvent(SMEvent smEvent) {
+        if (false == _map.ContainsKey(smEvent.Name)) {
+            _map.Add(smEvent.Name, new Dictionary<string, string>());
+        }
+
+        foreach (string fromName in smEvent.Froms) {
+            _map[smEvent.Name].Add(fromName, smEvent.To);
+        }
+    }
+
     private bool DoCallback(Func<SMEvent, bool> callback, SMEvent smEvent)
     {
         if (null != callback)
@@ -222,37 +220,37 @@ public class StateMachine : MonoBehaviour
 
     private bool BeforeAnyEvent(SMEvent smEvent)
     {
-        if (false == _callbacks.ContainsKey(STATE_ONBRFOREEVENT))
+        if (false == _callbacks.ContainsKey(HANDLE_ONBRFOREEVENT))
             return true;
-        return DoCallback(_callbacks[STATE_ONBRFOREEVENT], smEvent);
+        return DoCallback(_callbacks[HANDLE_ONBRFOREEVENT], smEvent);
     }
 
     private bool AfterAnyEvent(SMEvent smEvent)
     {
-        if (false == _callbacks.ContainsKey(STATE_ONAFTEREVENT))
+        if (false == _callbacks.ContainsKey(HANDLE_ONAFTEREVENT))
             return true;
-        return DoCallback(_callbacks[STATE_ONAFTEREVENT], smEvent);
+        return DoCallback(_callbacks[HANDLE_ONAFTEREVENT], smEvent);
     }
 
     private bool EnterAnyState(SMEvent smEvent)
     {
-        if (false == _callbacks.ContainsKey(STATE_ONENTEREVENT))
+        if (false == _callbacks.ContainsKey(HANDLE_ONENTEREVENT))
             return true;
-        return DoCallback(_callbacks[STATE_ONENTEREVENT], smEvent);
+        return DoCallback(_callbacks[HANDLE_ONENTEREVENT], smEvent);
     }
 
     private bool LeaveAnyState(SMEvent smEvent)
     {
-        if (false == _callbacks.ContainsKey(STATE_ONLEAVEEVENT))
+        if (false == _callbacks.ContainsKey(HANDLE_ONLEAVEEVENT))
             return true;
-        return DoCallback(_callbacks[STATE_ONLEAVEEVENT], smEvent);
+        return DoCallback(_callbacks[HANDLE_ONLEAVEEVENT], smEvent);
     }
 
     private bool ChangeAnyState(SMEvent smEvent)
     {
-        if (false == _callbacks.ContainsKey(STATE_ONCHANGEEVENT))
+        if (false == _callbacks.ContainsKey(HANDLE_ONCHANGEEVENT))
             return true;
-        return DoCallback(_callbacks[STATE_ONCHANGEEVENT], smEvent);
+        return DoCallback(_callbacks[HANDLE_ONCHANGEEVENT], smEvent);
     }
 
     private bool BeforeThisEvent(SMEvent smEvent)
@@ -264,7 +262,7 @@ public class StateMachine : MonoBehaviour
 
     private bool AfterThisEvent(SMEvent smEvent)
     {
-        if (false == _callbacks.ContainsKey(STATE_ONBRFOREEVENT))
+        if (false == _callbacks.ContainsKey(string.Format("onafter{0}", smEvent.Name)))
             return true;
         return DoCallback(_callbacks[string.Format("onafter{0}", smEvent.Name)], smEvent);
     }
@@ -285,10 +283,10 @@ public class StateMachine : MonoBehaviour
 
     private bool BeforeEvent(SMEvent smEvent)
     {
-        if (BeforeThisEvent(smEvent) == true)
-            return true;
+        bool specific = BeforeThisEvent(smEvent);
+        bool general = BeforeAnyEvent(smEvent);
 
-        return BeforeAnyEvent(smEvent);
+        return specific && general;
     }
 
     private void AfterEvent(SMEvent smEvent)
